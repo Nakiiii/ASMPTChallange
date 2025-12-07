@@ -9,3 +9,4 @@ Technologien:
 - Backend wurde mit ASP.Net Core Web API erstellt.
 - Tests mit XUnit
 - Frontend mit Blazor
+- Docker file ist noch die, die am Anfang von Visual Studio erstellt wurde. Diese bitte ignorieren. Ich wollte es noch machen wenn ich mit der Zeit hinkomme.
