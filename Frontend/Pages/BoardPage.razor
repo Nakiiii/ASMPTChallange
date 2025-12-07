@@ -1,0 +1,160 @@
+﻿@page "/board"
+@using Frontend.Models
+@inject Services.BoardService BoardService
+
+<h3>Boards</h3>
+
+<button class="btn btn-primary" @onclick="LoadBoards">Load Boards</button>
+<button class="btn btn-success" @onclick="NewBoard">Add New Board</button>
+
+<hr />
+
+@if (boards.Count == 0)
+{
+    <p>No boards loaded.</p>
+}
+else
+{
+    <div>
+        @foreach (var board in boards)
+        {
+            <div class="card p-3 mb-3">
+
+                <div>
+                    <strong>@board.Description</strong>
+                </div>
+
+                <div>
+                    Size: @board.Length x @board.Width
+                </div>
+
+                <div class="mt-2">
+                    <button class="btn btn-warning me-2" @onclick="() => EditBoard(board)">Edit</button>
+                    <button class="btn btn-danger" @onclick="() => DeleteBoard(board.Id)">Delete</button>
+                </div>
+
+                @if (board.Components?.Count > 0)
+                {
+                    <ul class="mt-3">
+                        @foreach (var c in board.Components)
+                        {
+                            <li>@c.Description (Qty: @c.Quantity)</li>
+                        }
+                    </ul>
+                }
+
+            </div>
+        }
+    </div>
+}
+
+@if (isEditing)
+{
+    <hr />
+    <h4>@(currentBoard.Id == Guid.Empty ? "Create Board" : "Edit Board")</h4>
+
+    <EditForm Model="@currentBoard" OnValidSubmit="SaveBoard">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label>Description</label>
+            <InputText class="form-control" @bind-Value="currentBoard.Description" />
+        </div>
+
+        <div class="mb-3">
+            <label>Length</label>
+            <InputNumber class="form-control" @bind-Value="currentBoard.Length" />
+        </div>
+
+        <div class="mb-3">
+            <label>Width</label>
+            <InputNumber class="form-control" @bind-Value="currentBoard.Width" />
+        </div>
+
+        <div class="mb-3">
+            <label>OrderId</label>
+            <input class="form-control" @bind-value="currentBoard.OrderId" />
+        </div>
+
+        <button type="submit" class="btn btn-primary me-2">Save</button>
+        <button type="button" class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+    </EditForm>
+}
+
+@code {
+    private List<Board> boards = new();
+    private Board currentBoard = new();
+    private bool isEditing = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBoards();
+    }
+
+    private async Task LoadBoards()
+    {
+        boards = await BoardService.GetBoardsAsync();
+    }
+
+    private void NewBoard()
+    {
+        currentBoard = new Board
+        {
+            Id = Guid.Empty,
+            Length = 0,
+            Width = 0,
+            OrderId = Guid.Empty,
+            Components = new List<Component>()
+        };
+        isEditing = true;
+    }
+
+    private void EditBoard(Board board)
+    {
+        currentBoard = new Board
+        {
+            Id = board.Id,
+            Description = board.Description,
+            Length = board.Length,
+            Width = board.Width,
+            OrderId = board.OrderId,
+            Components = board.Components?.Select(c => new Component
+            {
+                Id = c.Id,
+                Description = c.Description,
+                Quantity = c.Quantity,
+            }).ToList() ?? new()
+        };
+        isEditing = true;
+    }
+
+    private async Task SaveBoard()
+    {
+        if (currentBoard.Id == Guid.Empty)
+        {
+            currentBoard.Id = Guid.NewGuid();
+            await BoardService.CreateBoardAsync(currentBoard);
+        }
+        else
+        {
+            await BoardService.UpdateBoardAsync(currentBoard.Id, currentBoard);
+        }
+
+        await LoadBoards();
+        isEditing = false;
+        currentBoard = new Board();
+    }
+
+    private async Task DeleteBoard(Guid id)
+    {
+        await BoardService.DeleteBoardAsync(id);
+        await LoadBoards();
+    }
+
+    private void CancelEdit()
+    {
+        isEditing = false;
+        currentBoard = new Board();
+    }
+}

@@ -1,0 +1,124 @@
+﻿@page "/order"
+@using Frontend.Models
+@inject Services.OrderService OrderService
+
+<h3>Orders Management</h3>
+
+<button @onclick="LoadOrders">Load Orders</button>
+<button @onclick="NewOrder">New Order</button>
+
+@if (orders.Count == 0)
+{
+    <p>No orders loaded.</p>
+}
+else
+{
+    @foreach (var order in orders)
+    {
+        <div class="order-card">
+            <h4>@order.Description (@order.OrderDate.ToShortDateString())</h4>
+            <button @onclick="() => EditOrder(order)">Edit</button>
+            <button @onclick="() => DeleteOrder(order.Id)">Delete</button>
+
+            @if (order.Boards.Count > 0)
+            {
+                <ul>
+                    @foreach (var board in order.Boards)
+                    {
+                        <li>
+                            @board.Description - @board.Length x @board.Width
+                            <ul>
+                                @foreach (var comp in board.Components)
+                                {
+                                    <li>@comp.Description - Qty: @comp.Quantity</li>
+                                }
+                            </ul>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+}
+
+<EditForm Model="@currentOrder" OnValidSubmit="SaveOrder">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <h4>@(currentOrder.Id == Guid.Empty ? "New Order" : "Edit Order")</h4>
+    <InputText @bind-Value="currentOrder.Description" placeholder="Order Description" />
+    <InputDate @bind-Value="currentOrder.OrderDate" />
+
+    <button type="submit">Save</button>
+    <button type="button" @onclick="CancelEdit">Cancel</button>
+</EditForm>
+
+@code {
+    private List<Order> orders = new();
+    private Order currentOrder = new();
+
+    private async Task LoadOrders()
+    {
+        orders = await OrderService.GetOrdersAsync();
+    }
+
+    private void NewOrder()
+    {
+        currentOrder = new Order
+        {
+            Id = Guid.Empty,
+            OrderDate = DateTime.Today,
+            Boards = new List<Board>()
+        };
+    }
+
+    private void EditOrder(Order order)
+    {
+        currentOrder = new Order
+        {
+            Id = order.Id,
+            Description = order.Description,
+            OrderDate = order.OrderDate,
+            Boards = order.Boards.Select(b => new Board
+            {
+                Id = b.Id,
+                Description = b.Description,
+                Length = b.Length,
+                Width = b.Width,
+                Components = b.Components.Select(c => new Component
+                {
+                    Id = c.Id,
+                    Description = c.Description,
+                    Quantity = c.Quantity
+                }).ToList()
+            }).ToList()
+        };
+    }
+
+    private async Task SaveOrder()
+    {
+        if (currentOrder.Id == Guid.Empty)
+        {
+            currentOrder.Id = Guid.NewGuid();
+            await OrderService.CreateOrderAsync(currentOrder);
+        }
+        else
+        {
+            await OrderService.UpdateOrderAsync(currentOrder.Id, currentOrder);
+        }
+
+        await LoadOrders();
+        currentOrder = new Order();
+    }
+
+    private async Task DeleteOrder(Guid id)
+    {
+        await OrderService.DeleteOrderAsync(id);
+        await LoadOrders();
+    }
+
+    private void CancelEdit()
+    {
+        currentOrder = new Order();
+    }
+}
