@@ -22,55 +22,39 @@ namespace Backend.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<ActionResult<List<ComponentDto>>> GetAll()
         {
             _logger.LogInformation($"Getting all Components...");
-            var components = await _componentService.GetAllComponentsAsync();
-            return Ok(components);
+            var components = await _componentService.GetAllAsync();
+            return Ok(_mapper.Map<List<ComponentDto>>(components));
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
+        public async Task<ActionResult<ComponentDto>> GetById(Guid id)
         {
             _logger.LogInformation($"Getting Component with id: {id}...");
-            var component = await _componentService.GetComponentByIdAsync(id);
+            var component = await _componentService.GetByIdAsync(id);
             if (component == null) return NotFound();
-
-            return Ok(component);
+            return Ok(_mapper.Map<ComponentDto>(component));
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create(Component component)
+        public async Task<ActionResult<ComponentDto>> Create(ComponentDto dto)
         {
             _logger.LogInformation($"Creating Component...");
-            var created = await _componentService.AddComponentAsync(component);
-            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+            var component = _mapper.Map<Component>(dto);
+            await _componentService.AddAsync(component);
+            return CreatedAtAction(nameof(GetById), new { id = component.Id }, _mapper.Map<ComponentDto>(component));
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] ComponentDto componentDto)
+        public async Task<IActionResult> Update(Guid id, ComponentDto dto)
         {
             _logger.LogInformation($"Updating Component with id: {id}...");
-            if (id != componentDto.Id)
-            {
-                _logger.LogWarning($"Failed updating Component with id: {id}...");
-                return BadRequest("ID mismatch");
-            }
-
-            var existingComponent = await _componentService.GetComponentByIdAsync(id);
-            if (existingComponent == null) return NotFound();
-
-            _mapper.Map(componentDto, existingComponent);
-
-            var updated = await _componentService.UpdateComponentAsync(id, existingComponent);
-            if (!updated)
-            {
-                _logger.LogWarning($"Failed updating Component with id: {id}...");
-                return StatusCode(500, "Could not update the component");
-            }
-
+            if (id != dto.Id) return BadRequest("ID mismatch");
+            var component = _mapper.Map<Component>(dto);
+            await _componentService.UpdateAsync(component);
             _logger.LogInformation($"Component {id} updated successfully...");
-
             return NoContent();
         }
 
@@ -79,9 +63,7 @@ namespace Backend.Controllers
         {
             _logger.LogInformation($"Deleting Component with {id}...");
 
-            var deleted = await _componentService.DeleteComponentAsync(id);
-            if (!deleted) return NotFound();
-
+            await _componentService.DeleteAsync(id);
             return NoContent();
         }
     }

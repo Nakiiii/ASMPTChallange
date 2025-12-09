@@ -39,7 +39,7 @@ namespace Backend.Tests.Tests
 
             // Act
             order.Description = "Updated Description";
-            var result = await repo.UpdateOrderAsync(order.Id, order);
+            var result = await repo.UpdateAsync(order);
 
             // Assert
             Assert.True(result);

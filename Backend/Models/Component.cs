@@ -7,7 +7,6 @@
         public string Description { get; set; } = string.Empty;
         public int Quantity { get; set; }
 
-        public Guid BoardId { get; set; }
-        public Board? Board { get; set; }
+        public List<Board> Boards { get; set; } = [];
     }
 }

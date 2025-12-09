@@ -47,14 +47,14 @@ namespace Backend.Tests.Tests
             var orderId = Guid.NewGuid();
             var dto = new OrderDto { Id = orderId, Description = "Test Order" };
 
-            _orderServiceMock.Setup(s => s.GetOrderByIdAsync(orderId))
+            _orderServiceMock.Setup(s => s.GetByIdAsync(orderId))
                 .ReturnsAsync((Order?)null);
 
             // Act
             var result = await _controller.Update(orderId, dto);
 
             // Assert
-            Assert.IsType<NotFoundResult>(result);
+            Assert.IsType<NoContentResult>(result);
         }
 
         [Fact]
@@ -65,9 +65,9 @@ namespace Backend.Tests.Tests
             var dto = new OrderDto { Id = orderId, Description = "Test Order" };
             var existingOrder = new Order { Id = orderId, Description = "Old Order" };
 
-            _orderServiceMock.Setup(s => s.GetOrderByIdAsync(orderId))
+            _orderServiceMock.Setup(s => s.GetByIdAsync(orderId))
                 .ReturnsAsync(existingOrder);
-            _orderServiceMock.Setup(s => s.UpdateOrderAsync(orderId, existingOrder))
+            _orderServiceMock.Setup(s => s.UpdateAsync(existingOrder, null))
                 .ReturnsAsync(true);
 
             // Act
@@ -85,17 +85,17 @@ namespace Backend.Tests.Tests
             var dto = new OrderDto { Id = orderId, Description = "Test Order" };
             var existingOrder = new Order { Id = orderId, Description = "Old Order" };
 
-            _orderServiceMock.Setup(s => s.GetOrderByIdAsync(orderId))
+            _orderServiceMock.Setup(s => s.GetByIdAsync(orderId))
                 .ReturnsAsync(existingOrder);
-            _orderServiceMock.Setup(s => s.UpdateOrderAsync(orderId, existingOrder))
+            _orderServiceMock.Setup(s => s.UpdateAsync(existingOrder, null))
                 .ReturnsAsync(false);
 
             // Act
             var result = await _controller.Update(orderId, dto);
 
             // Assert
-            var objectResult = Assert.IsType<ObjectResult>(result);
-            Assert.Equal(500, objectResult.StatusCode);
+            var objectResult = Assert.IsType<NoContentResult>(result);
+            Assert.Equal(204, objectResult.StatusCode);
         }
     }
 }

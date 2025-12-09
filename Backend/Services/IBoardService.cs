@@ -1,13 +1,16 @@
 ﻿using Backend.Models;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Backend.Services
 {
     public interface IBoardService
     {
-        Task<List<Board>> GetAllBoardsAsync();
-        Task<Board?> GetBoardByIdAsync(Guid id);
-        Task<Board> AddBoardAsync(Board board);
-        Task<bool> UpdateBoardAsync(Guid id, Board board);
-        Task<bool> DeleteBoardAsync(Guid id);
+        Task<List<Board>> GetAllAsync();
+        Task<Board?> GetByIdAsync(Guid id);
+        Task<Board> AddAsync(Board board, List<Guid>? orderIds = null, List<Guid>? componentIds = null);
+        Task<bool> UpdateAsync(Board board, List<Guid>? orderIds = null, List<Guid>? componentIds = null);
+        Task<bool> DeleteAsync(Guid id);
+        Task<bool> AddComponentToBoardAsync(Guid boardId, Guid componentId);
+        Task<bool> RemoveComponentFromBoardAsync(Guid boardId, Guid componentId);
     }
 }

@@ -7,6 +7,7 @@
         public int Length { get; set; }
         public int Width { get; set; }
 
-        public List<ComponentDto> Components { get; set; } = new();
+        public List<Guid> ComponentIds { get; set; } = [];
+        public List<Guid> OrderIds { get; set; } = [];
     }
 }

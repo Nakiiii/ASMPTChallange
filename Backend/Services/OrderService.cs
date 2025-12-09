@@ -14,14 +14,12 @@ namespace Backend.Services
             _orderRepository = orderRepository;
         }
 
-        public Task<List<Order>> GetAllOrdersAsync() => _orderRepository.GetAllOrdersAsync();
-
-        public Task<Order?> GetOrderByIdAsync(Guid id) => _orderRepository.GetOrderByIdAsync(id);
-
-        public Task<Order> AddOrderAsync(Order order) => _orderRepository.AddOrderAsync(order);
-
-        public Task<bool> UpdateOrderAsync(Guid id, Order order) => _orderRepository.UpdateOrderAsync(id, order);
-
-        public Task<bool> DeleteOrderAsync(Guid id) => (_orderRepository.DeleteOrderAsync(id));
+        public Task<List<Order>> GetAllAsync() => _orderRepository.GetAllAsync();
+        public Task<Order?> GetByIdAsync(Guid id) => _orderRepository.GetByIdAsync(id);
+        public Task<Order> AddAsync(Order order, List<Guid>? boardIds = null) => _orderRepository.AddAsync(order, boardIds);
+        public Task<bool> UpdateAsync(Order order, List<Guid>? boardIds = null) => _orderRepository.UpdateAsync(order, boardIds);
+        public Task<bool> DeleteAsync(Guid id) => _orderRepository.DeleteAsync(id);
+        public Task<bool> AddBoardToOrderAsync(Guid orderId, Guid boardId) => _orderRepository.AddBoardAsync(orderId, boardId);
+        public Task<bool> RemoveBoardFromOrderAsync(Guid orderId, Guid boardId) => _orderRepository.RemoveBoardAsync(orderId, boardId);
     }
 }

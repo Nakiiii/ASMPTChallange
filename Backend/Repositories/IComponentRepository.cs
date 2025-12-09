@@ -4,10 +4,10 @@ namespace Backend.Repositories
 {
     public interface IComponentRepository
     {
-        Task<List<Component>> GetAllComponentsAsync();
-        Task<Component?> GetComponentByIdAsync(Guid id);
-        Task<Component> AddComponentAsync(Component component);
-        Task<bool> UpdateComponentAsync(Guid id, Component component);
-        Task<bool> DeleteComponentAsync(Guid id);
+        Task<List<Component>> GetAllAsync();
+        Task<Component?> GetByIdAsync(Guid id);
+        Task<Component> AddAsync(Component component);
+        Task<bool> UpdateAsync(Component component);
+        Task<bool> DeleteAsync(Guid id);
     }
 }

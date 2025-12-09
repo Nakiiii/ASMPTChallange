@@ -15,55 +15,102 @@ namespace Backend.Repositories
             _logger = logger;
         }
 
-        public async Task<Order> AddOrderAsync(Order order)
+        public async Task<Order> AddAsync(Order order, List<Guid>? boardIds = null)
         {
+            _logger.LogInformation("Creating Order...");
+            await PopulateNavigationPropertiesAsync(order, boardIds);
             _context.Orders.Add(order);
             await _context.SaveChangesAsync();
+            _logger.LogInformation("Order Created!");
             return order;
         }
 
-        public async Task<bool> DeleteOrderAsync(Guid id)
+        public async Task<bool> DeleteAsync(Guid id)
         {
+            _logger.LogInformation("Deleting Order...");
             var order = await _context.Orders.FindAsync(id);
             if (order == null) return false;
             _context.Orders.Remove(order);
+            _logger.LogInformation("Order Removed!");
             return await _context.SaveChangesAsync() > 0;
         }
 
-        public async Task<List<Order>> GetAllOrdersAsync()
+        public async Task<List<Order>> GetAllAsync()
         {
-            return await _context.Orders
-            .Include(o => o.Boards)
-            .ThenInclude(b => b.Components)
-            .ToListAsync();
+            _logger.LogInformation("Fetching all Orders");
+            return await _context.Orders.Include(o => o.Boards).ToListAsync();
         }
 
-        public async Task<Order?> GetOrderByIdAsync(Guid id)
+        public async Task<Order?> GetByIdAsync(Guid id)
         {
-            _logger.LogInformation("Fetching order {OrderId}", id);
-            return await _context.Orders
-            .Include(o => o.Boards)
-            .ThenInclude(b => b.Components)
-            .FirstOrDefaultAsync(o => o.Id == id);
+            _logger.LogInformation("Fetching order: {OrderId}", id);
+            return await _context.Orders.Include(o => o.Boards).FirstOrDefaultAsync(o => o.Id == id);
         }
 
-        public async Task<bool> UpdateOrderAsync(Guid id, Order order)
+        public async Task<bool> UpdateAsync(Order order, List<Guid>? boardIds = null)
         {
+            _logger.LogInformation("Updating order: {OrderId}", order.Id);
+            await PopulateNavigationPropertiesAsync(order, boardIds);
+            _context.Orders.Update(order);
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        public async Task<bool> AddBoardAsync(Guid orderId, Guid boardId)
+        {
+            _logger.LogInformation("Adding Board to Order...");
             try
             {
-                await _context.SaveChangesAsync();
-                _logger.LogInformation("Order {OrderId} updated successfully", order.Id);
-                return true;
+                var order = await GetByIdAsync(orderId);
+                if (order == null) throw new Exception("Order not found");
+
+                var board = await _context.Boards.FindAsync(boardId);
+                if (board == null) throw new Exception("Board not found");
+
+                if (!order.Boards.Contains(board))
+                    order.Boards.Add(board);
+
+                _logger.LogWarning("Adding Board to Order succeeded!");
+                return await _context.SaveChangesAsync() > 0;
             }
-            catch (DbUpdateConcurrencyException ex)
+            catch (Exception ex) 
             {
-                _logger.LogWarning(ex, "Concurrency issue updating order {OrderId}", order.Id);
+                _logger.LogWarning("Adding Board to Order failed!\n{ex}", ex);
                 return false;
             }
-            catch (Exception ex)
+        }
+
+        public async Task<bool> RemoveBoardAsync(Guid orderId, Guid boardId)
+        {
+            _logger.LogInformation("Removing Board from Order...");
+            try
             {
-                _logger.LogError(ex, "Unexpected error updating order {OrderId}", order.Id);
+                var order = await GetByIdAsync(orderId);
+                if (order == null) throw new Exception("Order not found");
+
+                var board = order.Boards.FirstOrDefault(b => b.Id == boardId);
+                if (board == null) throw new Exception("Board not associated with order");
+
+                order.Boards.Remove(board);
+
+                _logger.LogInformation("Removing Board from Order succeeded!");
+                return await _context.SaveChangesAsync() > 0;
+            }
+            catch (Exception ex) 
+            {
+                _logger.LogWarning("Removing Board from Order failed!\n{ex}", ex);
                 return false;
+            }
+        }
+
+        private async Task PopulateNavigationPropertiesAsync(Order order, List<Guid>? boardIds)
+        {
+            if (boardIds != null)
+            {
+                var boards = await _context.Boards
+                    .Where(b => boardIds.Contains(b.Id))
+                    .ToListAsync();
+
+                order.Boards = boards;
             }
         }
     }

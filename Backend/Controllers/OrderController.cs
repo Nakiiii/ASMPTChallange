@@ -22,55 +22,44 @@ namespace Backend.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<ActionResult<List<OrderDto>>> GetAll()
         {
-            var orders = await _orderService.GetAllOrdersAsync();
-            return Ok(orders);
+            _logger.LogInformation($"Getting all Orders...");
+            var orders = await _orderService.GetAllAsync();
+            return Ok(_mapper.Map<List<OrderDto>>(orders));
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
+        public async Task<ActionResult<OrderDto>> GetById(Guid id)
         {
-            var order = await _orderService.GetOrderByIdAsync(id);
+            _logger.LogInformation($"Getting Orders with id: {id}...");
+            var order = await _orderService.GetByIdAsync(id);
             if (order == null) return NotFound();
-            return Ok(order);
+            return Ok(_mapper.Map<OrderDto>(order));
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create(Order order)
+        public async Task<ActionResult<OrderDto>> Create(OrderDto dto)
         {
             _logger.LogInformation($"Creating Order...");
-            var createdOrder = await _orderService.AddOrderAsync(order);
+            var order = _mapper.Map<Order>(dto);
+            await _orderService.AddAsync(order, dto.BoardIds);
             _logger.LogInformation($"Order {order.Id} created successfully...");
-            return CreatedAtAction(nameof(GetById), new { id = createdOrder.Id }, createdOrder);
+
+            return CreatedAtAction(nameof(GetById), new { id = order.Id }, _mapper.Map<OrderDto>(order));
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] OrderDto orderDto)
+        public async Task<IActionResult> Update(Guid id, OrderDto dto)
         {
             _logger.LogInformation($"Updating Order {id}...");
-            if (id != orderDto.Id)
+            if (id != dto.Id)
             {
                 _logger.LogWarning("Update failed: ID mismatch {Id}...", id);
                 return BadRequest("ID mismatch");
             }
-
-            var existingOrder = await _orderService.GetOrderByIdAsync(id);
-            if (existingOrder == null)
-            {
-                _logger.LogWarning("Update failed: Order {Id} not found...", id);
-                return NotFound();
-            }
-
-            _mapper.Map(orderDto, existingOrder);
-
-            var updated = await _orderService.UpdateOrderAsync(id, existingOrder);
-            if (!updated)
-            {
-                _logger.LogError("Failed to update order {Id}...", id);
-                return StatusCode(500, "Could not update the order");
-            }
-
+            var order = _mapper.Map<Order>(dto);
+            await _orderService.UpdateAsync(order, dto.BoardIds);
             _logger.LogInformation("Order {Id} updated successfully...", id);
             return NoContent();
         }
@@ -79,9 +68,24 @@ namespace Backend.Controllers
         public async Task<IActionResult> Delete(Guid id)
         {
             _logger.LogInformation("Deleting Order {Id}...", id);
-            var result = await _orderService.DeleteOrderAsync(id);
-            if (!result) return NotFound();
+            await _orderService.DeleteAsync(id);
             _logger.LogInformation("Order {Id} deleted successfully...", id);
+            return NoContent();
+        }
+
+        [HttpPost("{orderId}/boards/{boardId}")]
+        public async Task<IActionResult> AddBoard(Guid orderId, Guid boardId)
+        {
+            _logger.LogInformation("Adding Board to Order...");
+            await _orderService.AddBoardToOrderAsync(orderId, boardId);
+            return NoContent();
+        }
+
+        [HttpDelete("{orderId}/boards/{boardId}")]
+        public async Task<IActionResult> RemoveBoard(Guid orderId, Guid boardId)
+        {
+            _logger.LogInformation("Removing Board from Order...");
+            await _orderService.RemoveBoardFromOrderAsync(orderId, boardId);
             return NoContent();
         }
 

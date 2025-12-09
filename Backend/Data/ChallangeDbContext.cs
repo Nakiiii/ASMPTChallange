@@ -15,19 +15,15 @@ namespace Backend.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // Configure one-to-many relationship: Order -> Boards
-            modelBuilder.Entity<Board>()
-                .HasOne(b => b.Order)
-                .WithMany(o => o.Boards)
-                .HasForeignKey(b => b.OrderId)
-                .OnDelete(DeleteBehavior.Cascade);
+            // Configure Many-to-Many for Order <-> Board
+            modelBuilder.Entity<Order>()
+                .HasMany(o => o.Boards)
+                .WithMany(b => b.Orders);
 
-            // Configure one-to-many relationship: Board -> Components
-            modelBuilder.Entity<Component>()
-                .HasOne(c => c.Board)
-                .WithMany(b => b.Components)
-                .HasForeignKey(c => c.BoardId)
-                .OnDelete(DeleteBehavior.Cascade);
+            // Configure Many-to-Many for Board <-> Component
+            modelBuilder.Entity<Board>()
+                .HasMany(b => b.Components)
+                .WithMany(c => c.Boards);
 
             // Configure Description constraints to limit length
             modelBuilder.Entity<Order>()
