@@ -2,11 +2,12 @@
 @using Frontend.Models
 @inject Services.ComponentService ComponentService
 
-<h3 class="text-2xl font-bold mb-4">Components</h3>
+<h3>Components</h3>
 
-<button class="btn btn-primary mb-3" @onclick="ShowCreateModal">Add Component</button>
+<button class="btn btn-primary mb-2" @onclick="LoadComponents">Load Components</button>
+<button class="btn btn-success mb-2" @onclick="ShowCreateForm">New Component</button>
 
-@if (components == null)
+@if (Components == null)
 {
     <p>Loading...</p>
 }
@@ -15,23 +16,21 @@ else
     <table class="table table-striped">
         <thead>
             <tr>
-                <th>Id</th>
-                <th>Name</th>
                 <th>Description</th>
                 <th>Quantity</th>
+                <th>Boards</th>
                 <th>Actions</th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var c in components)
+            @foreach (var comp in Components)
             {
                 <tr>
-                    <td>@c.Id</td>
-                    <td>@c.Description</td>
-                    <td>@c.Quantity</td>
+                    <td>@comp.Description</td>
+                    <td>@comp.Quantity</td>
                     <td>
-                        <button class="btn btn-sm btn-warning" @onclick="() => EditComponent(c)">Edit</button>
-                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteComponent(c.Id)">Delete</button>
+                        <button class="btn btn-warning btn-sm" @onclick="() => EditComponent(comp)">Edit</button>
+                        <button class="btn btn-danger btn-sm" @onclick="() => DeleteComponent(comp.Id.Value)">Delete</button>
                     </td>
                 </tr>
             }
@@ -39,68 +38,75 @@ else
     </table>
 }
 
-@if (showModal)
+@if (ShowForm)
 {
-    <div class="modal-background">
-        <div class="modal-card p-4">
-            <h4>@(isEditing ? "Edit Component" : "Create Component")</h4>
-            <input class="form-control mb-2" placeholder="Description" @bind-value="currentComponent.Description" />
-            <input class="form-control mb-2" type="number" placeholder="Quantity" @bind-value="currentComponent.Quantity" />
-            <input class="form-control mb-2" placeholder="BoardId" @bind-value="currentComponent.BoardId" />
-            <button class="btn btn-success" @onclick="SaveComponent">Save</button>
-            <button class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+    <EditForm Model="SelectedComponent" OnValidSubmit="SaveComponent">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-2">
+            <label>Description</label>
+            <InputText class="form-control" @bind-Value="SelectedComponent.Description" />
         </div>
-    </div>
+
+        <div class="mb-2">
+            <label>Quantity</label>
+            <InputNumber class="form-control" @bind-Value="SelectedComponent.Quantity" />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Save</button>
+        <button type="button" class="btn btn-secondary" @onclick="CancelForm">Cancel</button>
+    </EditForm>
 }
 
 @code {
-    private List<Component>? components;
-    private bool showModal = false;
-    private bool isEditing = false;
-    private Component currentComponent = new();
-
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadComponents();
-    }
+    private List<Component> Components = new();
+    private Component SelectedComponent = new();
+    private bool ShowForm = false;
+    private string BoardIdsInput = "";
 
     private async Task LoadComponents()
     {
-        components = await ComponentService.GetComponentsAsync();
+        Components = await ComponentService.GetComponentsAsync() ?? [];
     }
 
-    private void ShowCreateModal()
+    private void ShowCreateForm()
     {
-        currentComponent = new Component();
-        isEditing = false;
-        showModal = true;
+        SelectedComponent = new Component();
+        BoardIdsInput = "";
+        ShowForm = true;
     }
 
-    private void EditComponent(Component component)
+    private void EditComponent(Component comp)
     {
-        currentComponent = new Component
+        SelectedComponent = new Component
         {
-            Id = component.Id,
-            Description = component.Description,
-            Quantity = component.Quantity,
-            BoardId = component.BoardId
+            Id = comp.Id,
+            Description = comp.Description,
+            Quantity = comp.Quantity,
         };
-        isEditing = true;
-        showModal = true;
+        ShowForm = true;
+    }
+
+    private void CancelForm()
+    {
+        ShowForm = false;
     }
 
     private async Task SaveComponent()
     {
-        if (isEditing)
+        if (SelectedComponent.Id == null)
         {
-            await ComponentService.UpdateComponentAsync(currentComponent.Id, currentComponent);
+            SelectedComponent.Id = Guid.NewGuid();
+            await ComponentService.CreateComponentAsync(SelectedComponent);
         }
         else
         {
-            await ComponentService.CreateComponentAsync(currentComponent);
+            Guid? componentId = SelectedComponent.Id;
+            await ComponentService.UpdateComponentAsync(componentId!.Value, SelectedComponent);
         }
 
-        showModal = false;
+        ShowForm = false;
         await LoadComponents();
     }
 
@@ -109,6 +115,4 @@ else
         await ComponentService.DeleteComponentAsync(id);
         await LoadComponents();
     }
-
-    private void CloseModal() => showModal = false;
 }

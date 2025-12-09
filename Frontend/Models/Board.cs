@@ -6,7 +6,7 @@
         public string Description { get; set; } = string.Empty;
         public double Length { get; set; }
         public double Width { get; set; }
-        public Guid OrderId { get; set; }
-        public List<Component> Components { get; set; } = new();
+        public List<Guid> ComponentIds { get; set; } = [];
+        public List<Guid> OrderIds { get; set; } = [];
     }
 }

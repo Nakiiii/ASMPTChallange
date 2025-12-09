@@ -13,7 +13,7 @@ namespace Frontend.Services
         }
 
         public async Task<List<Order>> GetOrdersAsync() =>
-            await _http.GetFromJsonAsync<List<Order>>("api/order") ?? new();
+            await _http.GetFromJsonAsync<List<Order>>("api/order") ?? [];
 
         public async Task<Order?> GetOrderAsync(Guid id) =>
             await _http.GetFromJsonAsync<Order>($"api/order/{id}");
@@ -26,5 +26,12 @@ namespace Frontend.Services
 
         public async Task DeleteOrderAsync(Guid id) =>
             await _http.DeleteAsync($"api/order/{id}");
+
+        public async Task AddBoardToOrderAsync(Guid orderId, Guid boardId) =>
+            await _http.PostAsync($"api/order/{orderId}/boards/{boardId}", null);
+        
+        public async Task RemoveBoardFromOrderAsync(Guid orderId, Guid boardId) =>
+            await _http.DeleteAsync($"api/order/{orderId}/boards/{boardId}");
+        
     }
 }

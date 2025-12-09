@@ -2,113 +2,159 @@
 @using Frontend.Models
 @inject Services.OrderService OrderService
 
-<h3>Orders Management</h3>
+<h3>Orders</h3>
 
-<button @onclick="LoadOrders">Load Orders</button>
-<button @onclick="NewOrder">New Order</button>
+<button class="btn btn-primary mb-2" @onclick="LoadOrders">Load Orders</button>
+<button class="btn btn-success mb-2" @onclick="ShowCreateForm">New Order</button>
+<button class="btn btn-success mb-2" @onclick="ShowAddDeleteBoardForm">Add Board to Order</button>
 
-@if (orders.Count == 0)
+
+
+@if (Orders == null)
 {
-    <p>No orders loaded.</p>
+    <p>Loading...</p>
 }
 else
 {
-    @foreach (var order in orders)
-    {
-        <div class="order-card">
-            <h4>@order.Description (@order.OrderDate.ToShortDateString())</h4>
-            <button @onclick="() => EditOrder(order)">Edit</button>
-            <button @onclick="() => DeleteOrder(order.Id)">Delete</button>
-
-            @if (order.Boards.Count > 0)
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Description</th>
+                <th>Order Date</th>
+                <th>Boards</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var order in Orders)
             {
-                <ul>
-                    @foreach (var board in order.Boards)
-                    {
-                        <li>
-                            @board.Description - @board.Length x @board.Width
-                            <ul>
-                                @foreach (var comp in board.Components)
-                                {
-                                    <li>@comp.Description - Qty: @comp.Quantity</li>
-                                }
-                            </ul>
-                        </li>
-                    }
-                </ul>
+                <tr>
+                    <td>@order.Description</td>
+                    <td>@order.OrderDate.ToShortDateString()</td>
+                    <td>@string.Join(", ", order.BoardIds)</td>
+                    <td>
+                        <button class="btn btn-warning btn-sm" @onclick="() => EditOrder(order)">Edit</button>
+                        <button class="btn btn-danger btn-sm" @onclick="() => DeleteOrder((order.Id!).Value)">Delete</button>
+                    </td>
+                </tr>
             }
-        </div>
-    }
+        </tbody>
+    </table>
 }
 
-<EditForm Model="@currentOrder" OnValidSubmit="SaveOrder">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
+@if (ShowForm)
+{
+    <EditForm Model="SelectedOrder" OnValidSubmit="SaveOrder">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
 
-    <h4>@(currentOrder.Id == Guid.Empty ? "New Order" : "Edit Order")</h4>
-    <InputText @bind-Value="currentOrder.Description" placeholder="Order Description" />
-    <InputDate @bind-Value="currentOrder.OrderDate" />
+        <div class="mb-2">
+            <label>Description</label>
+            <InputText class="form-control" @bind-Value="SelectedOrder.Description" />
+        </div>
 
-    <button type="submit">Save</button>
-    <button type="button" @onclick="CancelEdit">Cancel</button>
-</EditForm>
+        <div class="mb-2">
+            <label>Order Date</label>
+            <InputDate class="form-control" @bind-Value="SelectedOrder.OrderDate" />
+        </div>
+
+        <div class="mb-2">
+            <label>Boards (IDs, comma separated)</label>
+            <InputText class="form-control" @bind-Value="BoardIdsInput" />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Save</button>
+        <button type="button" class="btn btn-secondary" @onclick="CancelForm">Cancel</button>
+    </EditForm>
+}
+
+@if (ShowBoardForm)
+{
+        <div class="mb-2">
+            <label>OrderId</label>
+            <InputText class="form-control" @bind-Value="OrderId" />
+        </div>
+
+        <div class="mb-2">
+            <label>BoardId</label>
+            <InputText class="form-control" @bind-Value="BoardId" />
+        </div>
+
+        <button type="button" class="btn btn-primary" @onclick="AddBoard">Add</button>
+        <button type="button" class="btn btn-primary" @onclick="DeleteBoard">Delete</button>
+        <button type="button" class="btn btn-secondary" @onclick="CancelBoardForm">Cancel</button>
+}
 
 @code {
-    private List<Order> orders = new();
-    private Order currentOrder = new();
+    private List<Order> Orders = new();
+    private Order SelectedOrder = new();
+    private bool ShowForm = false;
+    private string BoardIdsInput = "";
+    private bool ShowBoardForm = false;
+    private string OrderId = "";
+    private string BoardId = "";
 
     private async Task LoadOrders()
     {
-        orders = await OrderService.GetOrdersAsync();
+        Orders = await OrderService.GetOrdersAsync();
     }
 
-    private void NewOrder()
+    private void ShowCreateForm()
     {
-        currentOrder = new Order
-        {
-            Id = Guid.Empty,
-            OrderDate = DateTime.Today,
-            Boards = new List<Board>()
-        };
+        SelectedOrder = new Order { OrderDate = DateTime.Today };
+        BoardIdsInput = "";
+        ShowForm = true;
+    }
+
+    private void ShowAddDeleteBoardForm ()
+    {
+        ShowBoardForm = true;
     }
 
     private void EditOrder(Order order)
     {
-        currentOrder = new Order
+        SelectedOrder = new Order
         {
             Id = order.Id,
             Description = order.Description,
             OrderDate = order.OrderDate,
-            Boards = order.Boards.Select(b => new Board
-            {
-                Id = b.Id,
-                Description = b.Description,
-                Length = b.Length,
-                Width = b.Width,
-                Components = b.Components.Select(c => new Component
-                {
-                    Id = c.Id,
-                    Description = c.Description,
-                    Quantity = c.Quantity
-                }).ToList()
-            }).ToList()
+            BoardIds = order.BoardIds.ToList()
         };
+        BoardIdsInput = string.Join(",", SelectedOrder.BoardIds);
+        ShowForm = true;
+    }
+
+    private void CancelForm()
+    {
+        ShowForm = false;
+    }
+
+    private void CancelBoardForm()
+    {
+        ShowBoardForm = false;
     }
 
     private async Task SaveOrder()
     {
-        if (currentOrder.Id == Guid.Empty)
+        // Parse Board IDs
+        SelectedOrder.BoardIds = BoardIdsInput
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => Guid.Parse(s.Trim()))
+            .ToList();
+
+        if (SelectedOrder.Id == null)
         {
-            currentOrder.Id = Guid.NewGuid();
-            await OrderService.CreateOrderAsync(currentOrder);
+            SelectedOrder.Id = Guid.NewGuid();
+            await OrderService.CreateOrderAsync(SelectedOrder);
         }
         else
         {
-            await OrderService.UpdateOrderAsync(currentOrder.Id, currentOrder);
+            Guid? orderId = SelectedOrder.Id;
+            await OrderService.UpdateOrderAsync(orderId!.Value, SelectedOrder);
         }
 
+        ShowForm = false;
         await LoadOrders();
-        currentOrder = new Order();
     }
 
     private async Task DeleteOrder(Guid id)
@@ -117,8 +163,23 @@ else
         await LoadOrders();
     }
 
-    private void CancelEdit()
+    private async Task AddBoard()
     {
-        currentOrder = new Order();
+        if (!string.IsNullOrEmpty(OrderId) && !string.IsNullOrEmpty(BoardId))
+        {
+            var guidOrder = Guid.Parse(OrderId);
+            var guidBoard = Guid.Parse(BoardId);
+            await OrderService.AddBoardToOrderAsync(guidOrder, guidBoard);
+        }
+    }
+
+    private async Task DeleteBoard()
+    {
+        if (!string.IsNullOrEmpty(OrderId) && !string.IsNullOrEmpty(BoardId))
+        {
+            var guidOrder = Guid.Parse(OrderId);
+            var guidBoard = Guid.Parse(BoardId);
+            await OrderService.RemoveBoardFromOrderAsync(guidOrder, guidBoard);
+        }
     }
 }

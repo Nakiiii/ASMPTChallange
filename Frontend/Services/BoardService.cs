@@ -14,7 +14,7 @@ namespace Frontend.Services
 
         public async Task<List<Board>?> GetBoardsAsync()
         {
-            return await _http.GetFromJsonAsync<List<Board>>("api/board");
+            return await _http.GetFromJsonAsync<List<Board>>("api/board") ?? [];
         }
 
         public async Task<Board?> GetBoardAsync(Guid id)
@@ -38,6 +38,16 @@ namespace Frontend.Services
         {
             var response = await _http.DeleteAsync($"api/board/{id}");
             return response.IsSuccessStatusCode;
+        }
+
+        public async Task AddComponentToBoardAsync(Guid boardId, Guid componentId)
+        {
+            await _http.PostAsync($"api/board/{boardId}/components/{componentId}", null);
+        }
+
+        public async Task RemoveComponentFromBoardAsync(Guid boardId, Guid componentId)
+        {
+            await _http.DeleteAsync($"api/board/{boardId}/components/{componentId}");
         }
     }
 }

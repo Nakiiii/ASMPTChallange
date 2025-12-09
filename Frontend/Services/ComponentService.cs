@@ -14,7 +14,7 @@ namespace Frontend.Services
 
         public async Task<List<Component>?> GetComponentsAsync()
         {
-            return await _http.GetFromJsonAsync<List<Component>>("api/component");
+            return await _http.GetFromJsonAsync<List<Component>>("api/component") ?? new List<Component>();
         }
 
         public async Task<Component?> GetComponentAsync(Guid id)
